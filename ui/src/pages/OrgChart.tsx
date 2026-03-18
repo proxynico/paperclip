@@ -139,7 +139,7 @@ const defaultDotColor = "#a3a3a3";
 // ── Main component ──────────────────────────────────────────────────────
 
 export function OrgChart() {
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, companies } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const navigate = useNavigate();
 
@@ -165,8 +165,24 @@ export function OrgChart() {
     setBreadcrumbs([{ label: "Org Chart" }]);
   }, [setBreadcrumbs]);
 
+  // Inject a virtual owner node at the top, with all root agents as reports
+  const enrichedTree = useMemo(() => {
+    const roots = orgTree ?? [];
+    if (roots.length === 0) return roots;
+    // Wrap in a virtual "Board" node representing the company owner
+    const companyName = companies?.find((c) => c.id === selectedCompanyId)?.name ?? "Board";
+    const virtualOwner: OrgNode = {
+      id: "__owner__",
+      name: "Nico",
+      role: "ceo",
+      status: "active",
+      reports: roots,
+    };
+    return [virtualOwner];
+  }, [orgTree, companies, selectedCompanyId]);
+
   // Layout computation
-  const layout = useMemo(() => layoutForest(orgTree ?? []), [orgTree]);
+  const layout = useMemo(() => layoutForest(enrichedTree), [enrichedTree]);
   const allNodes = useMemo(() => flattenLayout(layout), [layout]);
   const edges = useMemo(() => collectEdges(layout), [layout]);
 
@@ -372,28 +388,39 @@ export function OrgChart() {
         }}
       >
         {allNodes.map((node) => {
-          const agent = agentMap.get(node.id);
+          const isOwner = node.id === "__owner__";
+          const agent = isOwner ? undefined : agentMap.get(node.id);
           const dotColor = statusDotColor[node.status] ?? defaultDotColor;
 
           return (
             <div
               key={node.id}
               data-org-card
-              className="absolute bg-card border border-border rounded-lg shadow-sm hover:shadow-md hover:border-foreground/20 transition-[box-shadow,border-color] duration-150 cursor-pointer select-none"
+              className={`absolute rounded-lg shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-150 select-none ${
+                isOwner
+                  ? "bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-2 border-amber-500/30 hover:border-amber-400/50"
+                  : "bg-card border border-border hover:border-foreground/20 cursor-pointer"
+              }`}
               style={{
                 left: node.x,
                 top: node.y,
                 width: CARD_W,
                 minHeight: CARD_H,
               }}
-              onClick={() => navigate(agent ? agentUrl(agent) : `/agents/${node.id}`)}
+              onClick={() => !isOwner && navigate(agent ? agentUrl(agent) : `/agents/${node.id}`)}
             >
               <div className="flex items-center px-4 py-3 gap-3">
-                {/* Agent icon + status dot */}
+                {/* Icon + status dot */}
                 <div className="relative shrink-0">
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-                    <AgentIcon icon={agent?.icon} className="h-4.5 w-4.5 text-foreground/70" />
-                  </div>
+                  {isOwner ? (
+                    <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 text-sm font-bold">
+                      N
+                    </div>
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                      <AgentIcon icon={agent?.icon} className="h-4.5 w-4.5 text-foreground/70" />
+                    </div>
+                  )}
                   <span
                     className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card"
                     style={{ backgroundColor: dotColor }}
@@ -401,13 +428,13 @@ export function OrgChart() {
                 </div>
                 {/* Name + role + adapter type */}
                 <div className="flex flex-col items-start min-w-0 flex-1">
-                  <span className="text-sm font-semibold text-foreground leading-tight">
+                  <span className={`text-sm font-semibold leading-tight ${isOwner ? "text-amber-500" : "text-foreground"}`}>
                     {node.name}
                   </span>
                   <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                    {agent?.title ?? roleLabel(node.role)}
+                    {isOwner ? "CEO" : (agent?.title ?? roleLabel(node.role))}
                   </span>
-                  {agent && (
+                  {!isOwner && agent && (
                     <span className="text-[10px] text-muted-foreground/60 font-mono leading-tight mt-1">
                       {adapterLabels[agent.adapterType] ?? agent.adapterType}
                     </span>

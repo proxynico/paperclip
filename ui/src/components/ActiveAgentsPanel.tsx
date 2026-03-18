@@ -132,29 +132,24 @@ function AgentRunCard({
         : "border-border bg-background/70",
     )}>
       <div className="border-b border-border/60 px-3 py-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              {isActive ? (
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-70" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-500" />
-                </span>
-              ) : (
-                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-muted-foreground/35" />
-              )}
-              <Identity name={run.agentName} size="sm" className="[&>span:last-child]:!text-[11px]" />
-            </div>
-            <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span>{isActive ? "Live now" : run.finishedAt ? `Finished ${relativeTime(run.finishedAt)}` : `Started ${relativeTime(run.createdAt)}`}</span>
-            </div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {isActive ? (
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-70" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-500" />
+              </span>
+            ) : (
+              <span className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-muted-foreground/35" />
+            )}
+            <Identity name={run.agentName} size="sm" className="[&>span:last-child]:!text-[11px]" />
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {onDelete && (
               <button
                 onClick={onDelete}
-                className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
+                className="inline-flex items-center justify-center h-6 w-6 rounded-full border border-border/70 bg-background/70 text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
                 title="Delete run"
               >
                 <Trash2 className="h-2.5 w-2.5" />
@@ -162,11 +157,14 @@ function AgentRunCard({
             )}
             <Link
               to={`/agents/${run.agentId}/runs/${run.id}`}
-              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center justify-center h-6 w-6 rounded-full border border-border/70 bg-background/70 text-muted-foreground transition-colors hover:text-foreground"
             >
               <ExternalLink className="h-2.5 w-2.5" />
             </Link>
           </div>
+        </div>
+        <div className="mt-1.5 ml-[18px] text-[11px] text-muted-foreground">
+          {isActive ? "Live now" : run.finishedAt ? `Finished ${relativeTime(run.finishedAt)}` : `Started ${relativeTime(run.createdAt)}`}
         </div>
 
         {run.issueId && (
