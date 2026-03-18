@@ -77,11 +77,11 @@ export function ActiveAgentsPanel({ companyId }: ActiveAgentsPanelProps) {
         </h3>
         {hasFinished && (
           <button
-            className="flex items-center gap-1 rounded-md border border-border/70 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
+            className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 h-8 px-3 text-xs text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
             onClick={() => clearFinishedMutation.mutate()}
             disabled={clearFinishedMutation.isPending}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-4 w-4" />
             {clearFinishedMutation.isPending ? "Clearing…" : "Clear finished"}
           </button>
         )}
