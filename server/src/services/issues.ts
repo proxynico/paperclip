@@ -5,9 +5,11 @@ import {
   assets,
   companies,
   companyMemberships,
+  costEvents,
   documents,
   goals,
   heartbeatRuns,
+  issueApprovals,
   issueAttachments,
   issueLabels,
   issueComments,
@@ -17,6 +19,7 @@ import {
   labels,
   projectWorkspaces,
   projects,
+  workspaceRuntimeServices,
 } from "@paperclipai/db";
 import { extractProjectMentionIds } from "@paperclipai/shared";
 import { conflict, notFound, unprocessable } from "../errors.js";
@@ -796,6 +799,17 @@ export function issueService(db: Db) {
           .select({ documentId: issueDocuments.documentId })
           .from(issueDocuments)
           .where(eq(issueDocuments.issueId, id));
+
+        // Delete all dependent records before removing the issue
+        await tx.delete(issueComments).where(eq(issueComments.issueId, id));
+        await tx.delete(issueLabels).where(eq(issueLabels.issueId, id));
+        await tx.delete(issueReadStates).where(eq(issueReadStates.issueId, id));
+        await tx.delete(issueApprovals).where(eq(issueApprovals.issueId, id));
+        await tx.delete(costEvents).where(eq(costEvents.issueId, id));
+        await tx.delete(workspaceRuntimeServices).where(eq(workspaceRuntimeServices.issueId, id));
+
+        // Unlink child issues (set parent_id to null)
+        await tx.update(issues).set({ parentId: null }).where(eq(issues.parentId, id));
 
         const removedIssue = await tx
           .delete(issues)
