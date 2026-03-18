@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import path from "node:path";
 import type { Db } from "@paperclipai/db";
-import { agents as agentsTable, companies, heartbeatRuns } from "@paperclipai/db";
+import { agents as agentsTable, companies, heartbeatRuns, heartbeatRunEvents, activityLog, agentTaskSessions } from "@paperclipai/db";
 import { and, desc, eq, inArray, not, sql } from "drizzle-orm";
 import {
   createAgentKeySchema,
@@ -1624,6 +1624,59 @@ export function agentRoutes(db: Db) {
       agentName: agent.name,
       adapterType: agent.adapterType,
     });
+  });
+
+  // Delete a single heartbeat run and its dependents
+  router.delete("/heartbeat-runs/:runId", async (req, res) => {
+    const runId = req.params.runId as string;
+    const run = await heartbeat.getRun(runId);
+    if (!run) {
+      res.status(404).json({ error: "Heartbeat run not found" });
+      return;
+    }
+    assertCompanyAccess(req, run.companyId);
+
+    // Cascade: events, activity_log refs, agent_task_sessions refs
+    await db.delete(heartbeatRunEvents).where(eq(heartbeatRunEvents.runId, runId));
+    await db.update(activityLog).set({ runId: null }).where(eq(activityLog.runId, runId));
+    await db.update(agentTaskSessions).set({ lastRunId: null }).where(eq(agentTaskSessions.lastRunId, runId));
+    await db.delete(heartbeatRuns).where(eq(heartbeatRuns.id, runId));
+
+    res.json({ deleted: runId });
+  });
+
+  // Clear all finished heartbeat runs for a company
+  router.delete("/companies/:companyId/heartbeat-runs", async (req, res) => {
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+
+    // Get all finished run IDs
+    const finishedRuns = await db
+      .select({ id: heartbeatRuns.id })
+      .from(heartbeatRuns)
+      .where(
+        and(
+          eq(heartbeatRuns.companyId, companyId),
+          inArray(heartbeatRuns.status, ["finished", "failed", "cancelled"]),
+        ),
+      );
+
+    const runIds = finishedRuns.map((r) => r.id);
+    if (runIds.length === 0) {
+      res.json({ deleted: 0 });
+      return;
+    }
+
+    // Cascade in batches of 100
+    for (let i = 0; i < runIds.length; i += 100) {
+      const batch = runIds.slice(i, i + 100);
+      await db.delete(heartbeatRunEvents).where(inArray(heartbeatRunEvents.runId, batch));
+      await db.update(activityLog).set({ runId: null }).where(inArray(activityLog.runId, batch));
+      await db.update(agentTaskSessions).set({ lastRunId: null }).where(inArray(agentTaskSessions.lastRunId, batch));
+      await db.delete(heartbeatRuns).where(inArray(heartbeatRuns.id, batch));
+    }
+
+    res.json({ deleted: runIds.length });
   });
 
   return router;

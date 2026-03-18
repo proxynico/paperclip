@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 import { Link } from "@/lib/router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Issue } from "@paperclipai/shared";
 import { heartbeatsApi, type LiveRunForIssue } from "../api/heartbeats";
 import { issuesApi } from "../api/issues";
 import type { TranscriptEntry } from "../adapters";
 import { queryKeys } from "../lib/queryKeys";
 import { cn, relativeTime } from "../lib/utils";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
 import { Identity } from "./Identity";
 import { RunTranscriptView } from "./transcript/RunTranscriptView";
 import { useLiveRunTranscripts } from "./transcript/useLiveRunTranscripts";
@@ -49,11 +49,43 @@ export function ActiveAgentsPanel({ companyId }: ActiveAgentsPanelProps) {
     maxChunksPerRun: 120,
   });
 
+  const queryClient = useQueryClient();
+
+  const clearFinishedMutation = useMutation({
+    mutationFn: () => heartbeatsApi.clearAll(companyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.liveRuns(companyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(companyId) });
+    },
+  });
+
+  const deleteRunMutation = useMutation({
+    mutationFn: (runId: string) => heartbeatsApi.remove(runId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.liveRuns(companyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.heartbeats(companyId) });
+    },
+  });
+
+  const hasFinished = runs.some((r) => !isRunActive(r));
+
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Agents
-      </h3>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Agents
+        </h3>
+        {hasFinished && (
+          <button
+            className="flex items-center gap-1 rounded-md border border-border/70 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
+            onClick={() => clearFinishedMutation.mutate()}
+            disabled={clearFinishedMutation.isPending}
+          >
+            <Trash2 className="h-3 w-3" />
+            {clearFinishedMutation.isPending ? "Clearing…" : "Clear finished"}
+          </button>
+        )}
+      </div>
       {runs.length === 0 ? (
         <div className="rounded-xl border border-border p-4">
           <p className="text-sm text-muted-foreground">No recent agent runs.</p>
@@ -68,6 +100,7 @@ export function ActiveAgentsPanel({ companyId }: ActiveAgentsPanelProps) {
               transcript={transcriptByRun.get(run.id) ?? []}
               hasOutput={hasOutputForRun(run.id)}
               isActive={isRunActive(run)}
+              onDelete={!isRunActive(run) ? () => deleteRunMutation.mutate(run.id) : undefined}
             />
           ))}
         </div>
@@ -82,12 +115,14 @@ function AgentRunCard({
   transcript,
   hasOutput,
   isActive,
+  onDelete,
 }: {
   run: LiveRunForIssue;
   issue?: Issue;
   transcript: TranscriptEntry[];
   hasOutput: boolean;
   isActive: boolean;
+  onDelete?: () => void;
 }) {
   return (
     <div className={cn(
@@ -115,12 +150,23 @@ function AgentRunCard({
             </div>
           </div>
 
-          <Link
-            to={`/agents/${run.agentId}/runs/${run.id}`}
-            className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ExternalLink className="h-2.5 w-2.5" />
-          </Link>
+          <div className="flex items-center gap-1">
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
+                title="Delete run"
+              >
+                <Trash2 className="h-2.5 w-2.5" />
+              </button>
+            )}
+            <Link
+              to={`/agents/${run.agentId}/runs/${run.id}`}
+              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ExternalLink className="h-2.5 w-2.5" />
+            </Link>
+          </div>
         </div>
 
         {run.issueId && (

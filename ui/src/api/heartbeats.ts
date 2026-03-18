@@ -51,4 +51,7 @@ export const heartbeatsApi = {
     api.get<LiveRunForIssue[]>(`/companies/${companyId}/live-runs${minCount ? `?minCount=${minCount}` : ""}`),
   listInstanceSchedulerAgents: () =>
     api.get<InstanceSchedulerHeartbeatAgent[]>("/instance/scheduler-heartbeats"),
+  remove: (runId: string) => api.delete<{ deleted: string }>(`/heartbeat-runs/${runId}`),
+  clearAll: (companyId: string) =>
+    api.delete<{ deleted: number }>(`/companies/${companyId}/heartbeat-runs`),
 };
