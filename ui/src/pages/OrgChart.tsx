@@ -139,7 +139,7 @@ const defaultDotColor = "#a3a3a3";
 // ── Main component ──────────────────────────────────────────────────────
 
 export function OrgChart() {
-  const { selectedCompanyId, companies } = useCompany();
+  const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const navigate = useNavigate();
 
@@ -169,8 +169,6 @@ export function OrgChart() {
   const enrichedTree = useMemo(() => {
     const roots = orgTree ?? [];
     if (roots.length === 0) return roots;
-    // Wrap in a virtual "Board" node representing the company owner
-    const companyName = companies?.find((c) => c.id === selectedCompanyId)?.name ?? "Board";
     const virtualOwner: OrgNode = {
       id: "__owner__",
       name: "Nico",
@@ -179,7 +177,7 @@ export function OrgChart() {
       reports: roots,
     };
     return [virtualOwner];
-  }, [orgTree, companies, selectedCompanyId]);
+  }, [orgTree]);
 
   // Layout computation
   const layout = useMemo(() => layoutForest(enrichedTree), [enrichedTree]);
