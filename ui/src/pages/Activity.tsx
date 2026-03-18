@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { activityApi } from "../api/activity";
 import { agentsApi } from "../api/agents";
 import { issuesApi } from "../api/issues";
@@ -18,13 +18,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { History } from "lucide-react";
+import { History, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Agent } from "@paperclipai/shared";
 
 export function Activity() {
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const [filter, setFilter] = useState("all");
+  const queryClient = useQueryClient();
+
+  const clearAllMutation = useMutation({
+    mutationFn: () => activityApi.clearAll(selectedCompanyId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.activity(selectedCompanyId!) });
+    },
+  });
+
+  const deleteOneMutation = useMutation({
+    mutationFn: (id: string) => activityApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.activity(selectedCompanyId!) });
+    },
+  });
 
   useEffect(() => {
     setBreadcrumbs([{ label: "Activity" }]);
@@ -100,7 +116,25 @@ export function Activity() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between">
+        <div>
+          {filtered && filtered.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs text-destructive hover:text-destructive"
+              onClick={() => {
+                if (window.confirm(`Delete all ${data?.length ?? 0} activity entries?`)) {
+                  clearAllMutation.mutate();
+                }
+              }}
+              disabled={clearAllMutation.isPending}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              {clearAllMutation.isPending ? "Clearing…" : "Clear All"}
+            </Button>
+          )}
+        </div>
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-[140px] h-8 text-xs">
             <SelectValue placeholder="Filter by type" />
@@ -131,6 +165,7 @@ export function Activity() {
               agentMap={agentMap}
               entityNameMap={entityNameMap}
               entityTitleMap={entityTitleMap}
+              onDelete={(id) => deleteOneMutation.mutate(id)}
             />
           ))}
         </div>

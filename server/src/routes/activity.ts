@@ -84,5 +84,22 @@ export function activityRoutes(db: Db) {
     res.json(result);
   });
 
+  router.delete("/companies/:companyId/activity", async (req, res) => {
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    const count = await svc.clearAll(companyId);
+    res.json({ deleted: count });
+  });
+
+  router.delete("/activity/:id", async (req, res) => {
+    const id = req.params.id as string;
+    const removed = await svc.remove(id);
+    if (!removed) {
+      res.status(404).json({ error: "Activity event not found" });
+      return;
+    }
+    res.json(removed);
+  });
+
   return router;
 }

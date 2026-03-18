@@ -85,9 +85,10 @@ interface ActivityRowProps {
   entityNameMap: Map<string, string>;
   entityTitleMap?: Map<string, string>;
   className?: string;
+  onDelete?: (id: string) => void;
 }
 
-export function ActivityRow({ event, agentMap, entityNameMap, entityTitleMap, className }: ActivityRowProps) {
+export function ActivityRow({ event, agentMap, entityNameMap, entityTitleMap, className, onDelete }: ActivityRowProps) {
   const verb = formatVerb(event.action, event.details);
 
   const isHeartbeatEvent = event.entityType === "heartbeat_run";
@@ -109,7 +110,7 @@ export function ActivityRow({ event, agentMap, entityNameMap, entityTitleMap, cl
   const actorName = actor?.name ?? (event.actorType === "system" ? "System" : event.actorType === "user" ? "Board" : event.actorId || "Unknown");
 
   const inner = (
-    <div className="flex gap-3">
+    <div className="flex gap-3 group">
       <p className="flex-1 min-w-0 truncate">
         <Identity
           name={actorName}
@@ -121,6 +122,15 @@ export function ActivityRow({ event, agentMap, entityNameMap, entityTitleMap, cl
         {entityTitle && <span className="text-muted-foreground ml-1">— {entityTitle}</span>}
       </p>
       <span className="text-xs text-muted-foreground shrink-0 pt-0.5">{timeAgo(event.createdAt)}</span>
+      {onDelete && (
+        <button
+          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity shrink-0 pt-0.5"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(event.id); }}
+          title="Delete"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      )}
     </div>
   );
 

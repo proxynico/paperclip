@@ -159,5 +159,19 @@ export function activityService(db: Db) {
         .values(data)
         .returning()
         .then((rows) => rows[0]),
+
+    remove: (id: string) =>
+      db
+        .delete(activityLog)
+        .where(eq(activityLog.id, id))
+        .returning()
+        .then((rows) => rows[0] ?? null),
+
+    clearAll: (companyId: string) =>
+      db
+        .delete(activityLog)
+        .where(eq(activityLog.companyId, companyId))
+        .returning()
+        .then((rows) => rows.length),
   };
 }
