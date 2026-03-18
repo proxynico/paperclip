@@ -149,17 +149,19 @@ function AgentRunCard({
             {onDelete && (
               <button
                 onClick={onDelete}
-                className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border/70 bg-background/70 text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
+                style={{ width: 40, height: 40, minWidth: 40, minHeight: 40 }}
+                className="inline-flex items-center justify-center rounded-lg border border-border/70 bg-background/70 text-muted-foreground transition-colors hover:text-destructive hover:border-destructive/40"
                 title="Delete run"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
               </button>
             )}
             <Link
               to={`/agents/${run.agentId}/runs/${run.id}`}
-              className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border/70 bg-background/70 text-muted-foreground transition-colors hover:text-foreground"
+              style={{ width: 40, height: 40, minWidth: 40, minHeight: 40 }}
+              className="inline-flex items-center justify-center rounded-lg border border-border/70 bg-background/70 text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="size-4" />
             </Link>
           </div>
         </div>
